@@ -14,7 +14,7 @@ class ProductSerializer(serializers.ModelSerializer):
 class ProductPositionSerializer(serializers.ModelSerializer):
     class Meta:
         model = StockProduct
-        fields = ['quantity', 'price']
+        fields = ['product', 'quantity', 'price']
 
 
 
@@ -23,7 +23,7 @@ class StockSerializer(serializers.ModelSerializer):
     positions = ProductPositionSerializer(many=True)
     class Meta:
         model = Stock
-        fields = '__all__'
+        fields = ['address', 'positions']
 
 
     def create(self, validated_data):
@@ -33,33 +33,30 @@ class StockSerializer(serializers.ModelSerializer):
         for position in positions:
             StockProduct.objects.create(
                 product=position['product'],
-                quantity=position.get('quantuty', 1),
+                quantity=position.get('quantity', 1),
                 price=position.get('price', 0)
             )
         return stock
 
     def update(self, instance, validated_data):
-        positions_data = validated_data.pop('positions')
-        positions = {pos['product'].id: pos for pos in positions_data}
+        positions_data = validated_data.pop('positions', [])
+        instance.address = validated_data.get('address', instance.address)
+        instance.save()
 
-        for sp in instance.positions.all():
-            pos = positions.pop(sp.product.id, None)
-            if pos:
-                sp.quantity = pos.get('quantity', sp.quantity)
-                sp.price = pos.get('price', sp.price)
-                sp.save()
+        for position_data in positions_data:
+            product = position_data.get('product')
+            if product is None:
+                continue
 
-        for pos in positions.values():
-            StockProduct.objects.create(
-                product=pos['product'],
-                quantity=pos.get('quantity', 1),
-                price=pos.get('price', 0)
-
+            position, created = StockProduct.objects.get_or_create(
+                stock=instance,
+                product=product,
             )
 
-        instance.title = validated_data.get('name', instance.title)
-        instance.description = validated_data.get('description', instance.description)
+            position.quantity = position_data.get('quantity', position.quantity)
+            position.price = position_data.get('price', position.price)
 
         return instance
+
 
 
