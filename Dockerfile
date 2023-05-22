@@ -1,15 +1,21 @@
 FROM python:3.11.1
 
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
 
-RUN mkdir stock
-WORKDIR stock
-
-ADD . /stock/
-ADD .env.docker /stock/.env
 
 RUN pip install --upgrade pip
+COPY requirements.txt .
 RUN pip install -r requirements.txt
 
 
-ENTRYPOINT ["python", "manage.py"]
-CMD ["runserver", "0.0.0.0:8000"]
+RUN mkdir stock
+COPY . /stock
+WORKDIR stock
+RUN mkdir /stock/static
+
+RUN python manage.py collectstatic
+
+EXPOSE 8000
+
+CMD gunicorn stocks_products.wsgi:application --bind 0.0.0.0:8000

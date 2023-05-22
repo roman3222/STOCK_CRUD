@@ -1,0 +1,40 @@
+version: '3.9'
+services:
+  db_app:
+    image: postgres:15
+    container_name: stock_postgres
+    env_file:
+      - .env
+  stocks_products:
+    image: my_apps_2:latest
+    container_name: stock_app
+    depends_on:
+      - db_app
+    volumes:
+      - static_volume:/stock/static
+    env_file:
+      - .env
+    command: >
+      - bash -c "./manage.py collectstatic --noinput && ./manage.py migrate && gunicorn stocks_products.wsgi:application --bind 0.0.0.0:8000
+  nginx:
+    build:
+      dockerfile: ./Dockerfile
+      context: ./docker/nginx/
+    container_name: stock_nginx
+    image: app_nginx
+    volumes:
+      - static_volume:/stock/static
+    depends_on:
+      - stocks_products
+    ports:
+      - 80:80
+
+
+
+volumes:
+  static_volume:
+
+networks:
+  default:
+    external:
+      name: mynetwork
