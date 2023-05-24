@@ -13,7 +13,7 @@ RUN mkdir stock
 COPY . /stock
 WORKDIR stock
 RUN mkdir /stock/static
-
+RUN chmod +x ./manage.py
 RUN python manage.py collectstatic
 
 EXPOSE 8000
